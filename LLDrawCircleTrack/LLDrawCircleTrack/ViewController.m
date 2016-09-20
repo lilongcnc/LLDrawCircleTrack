@@ -24,7 +24,7 @@
     TBCircularSlider *slider = [[TBCircularSlider alloc]initWithFrame:CGRectMake(0, 60, TB_SLIDER_SIZE, TB_SLIDER_SIZE)];
     
     
-    slider.transform = CGAffineTransformMakeRotation(M_PI_2);
+//    slider.transform = CGAffineTransformMakeRotation(M_PI_2);
     
     //Define Target-Action behaviour
     [slider addTarget:self action:@selector(newValue:) forControlEvents:UIControlEventValueChanged];

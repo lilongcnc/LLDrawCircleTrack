@@ -32,6 +32,12 @@
     BOOL canAddFlag;
 }
 
+@property (nonatomic,strong) CAShapeLayer *progressLayer;
+@property (nonatomic,strong) CAShapeLayer *trackLayer;
+
+@property (nonatomic,strong) UIBezierPath *trackPath;
+@property (nonatomic,strong) UIBezierPath *progressPath;
+
 
 @property (nonatomic,assign) CGPoint movePoint1;
 @property (nonatomic,assign) CGPoint movePoint2;
@@ -258,118 +264,41 @@ static int const circleNumber = 6;
 
 #pragma mark - Drawing Functions - 
 
-
+BOOL isCreateCircleFlag;
 //Use the draw rect to draw the Background, the Circle and the Handle
 -(void)drawRect:(CGRect)rect{
     
     [super drawRect:rect];
     
-    CGContextRef ctx = UIGraphicsGetCurrentContext();
-    
-    /** Draw the Background **/
-    
-    //Create the path
-    CGContextAddArc(ctx, self.frame.size.width/2, self.frame.size.height/2, radius, 0, M_PI *2, 0);
-    
-    //Set the stroke color to black
-    [[UIColor blackColor]setStroke];
-    
-    //Define line width and cap
-    CGContextSetLineWidth(ctx, TB_BACKGROUND_WIDTH);
-    CGContextSetLineCap(ctx, kCGLineCapButt);
-    
-    //draw it!
-    CGContextDrawPath(ctx, kCGPathStroke);
-    
-    
-    
-    
-    
-    //** Draw the circle (using a clipped gradient) **/
-    
-    
-    /** Create THE MASK Image **/
-    UIGraphicsBeginImageContext(CGSizeMake(TB_SLIDER_SIZE,TB_SLIDER_SIZE));
-    CGContextRef imageCtx = UIGraphicsGetCurrentContext();
-    
-    
-    //    NSLog(@"🐩🐩🐩🐩🐩radius:%d--------------------%f",radius,ToRad(self.angle));
-    CGContextAddArc(imageCtx, self.frame.size.width/2  , self.frame.size.height/2, radius, 0, ToRad(self.currentValue), 0);
-    [[UIColor redColor]set];
-    
-    //Use shadow to create the Blur effect
-    CGContextSetShadowWithColor(imageCtx, CGSizeMake(0, 0), self.currentValue/20, [UIColor blackColor].CGColor);
-    
-    //define the path
-    CGContextSetLineWidth(imageCtx, TB_LINE_WIDTH);
-    CGContextDrawPath(imageCtx, kCGPathStroke);
-    //     [[UIColor cyanColor] set];
-    
-    //save the context content into the image mask
-    CGImageRef mask = CGBitmapContextCreateImage(UIGraphicsGetCurrentContext());
-    UIGraphicsEndImageContext();
-    
-    
-    
-    /** Clip Context to the mask **/
-    CGContextSaveGState(ctx);
-    
-    CGContextClipToMask(ctx, self.bounds, mask);
-    CGImageRelease(mask);
-    
-    
-    
-    
-    /** THE GRADIENT **/
-    
-    //list of components
-    CGFloat components[8] = {
-        0.0, 0.0, 1.0, 1.0,     // Start color - Blue
-        1.0, 0.0, 1.0, 1.0 };   // End color - Violet 紫色
-    
-    CGColorSpaceRef baseSpace = CGColorSpaceCreateDeviceRGB();
-    CGGradientRef gradient = CGGradientCreateWithColorComponents(baseSpace, components, NULL, 2);
-    CGColorSpaceRelease(baseSpace), baseSpace = NULL;
-    
-    //Gradient direction
-    CGPoint startPoint = CGPointMake(CGRectGetMidX(rect), CGRectGetMinY(rect));
-    CGPoint endPoint = CGPointMake(CGRectGetMidX(rect), CGRectGetMaxY(rect));
-    
-    //    NSLog(@"🐖%@-----%@",NSStringFromCGPoint(startPoint),NSStringFromCGPoint(endPoint));
-    
-    
-    //    pedef CF_OPTIONS (uint32_t, CGGradientDrawingOptions) {
-    //        kCGGradientDrawsBeforeStartLocation = (1 << 0),
-    //        kCGGradientDrawsAfterEndLocation = (1 << 1)
-    //    Draw the gradient
-    CGContextDrawLinearGradient(ctx, gradient,  startPoint,endPoint, kCGGradientDrawsAfterEndLocation);
-    CGGradientRelease(gradient),    gradient = NULL;
-    
-    CGContextRestoreGState(ctx);
-    
-    
-    
-    
-    /** Add some light reflection effects on the background circle**/
-    
-    CGContextSetLineWidth(ctx, 1);
-    CGContextSetLineCap(ctx, kCGLineCapRound);
-    
-    //Draw the outside light
-    CGContextBeginPath(ctx);
-    CGContextAddArc(ctx, self.frame.size.width/2  , self.frame.size.height/2, radius+TB_BACKGROUND_WIDTH/2, 0, ToRad(-self.currentValue), 1);
-    [[UIColor colorWithWhite:1.0 alpha:0.05]set];
-    CGContextDrawPath(ctx, kCGPathStroke);
-    
-    //draw the inner light
-    CGContextBeginPath(ctx);
-    CGContextAddArc(ctx, self.frame.size.width/2  , self.frame.size.height/2, radius-TB_BACKGROUND_WIDTH/2, 0, ToRad(-self.currentValue), 1);
-    [[UIColor colorWithWhite:1.0 alpha:0.05]set];
-    CGContextDrawPath(ctx, kCGPathStroke);
+
+    if (!isCreateCircleFlag) {
+        isCreateCircleFlag = YES;
+        NSLog(@"%f---%f",ToRad(360),ToDeg(360));
+        UIBezierPath* circlePath = [UIBezierPath bezierPathWithArcCenter:self.centerPoint
+                                                                  radius:radius
+                                                              startAngle:0
+                                                                endAngle:ToRad(360)
+                                                               clockwise:YES];
+        _progressLayer = [CAShapeLayer new];
+        
+        _progressLayer.frame = rect;
+        _progressLayer.path = circlePath.CGPath;
+        
+        _progressLayer.lineCap = kCALineCapRound;
+        _progressLayer.lineWidth = TB_LINE_WIDTH-10;
+        
+        _progressLayer.strokeColor = [UIColor redColor].CGColor;
+        _progressLayer.fillColor = nil;
+
+        _progressLayer.strokeStart = 0.f;
+        _progressLayer.strokeEnd = 0.f;
+
+        [self.layer addSublayer:_progressLayer];
+    }
     
     
     /** Draw the handle **/
-    [self drawTheHandle:ctx];
+    [self drawTheHandle];
     
 }
 
@@ -377,35 +306,35 @@ static int const circleNumber = 6;
 
 
 /** Draw a white knob over the circle **/
--(void) drawTheHandle:(CGContextRef)ctx{
+-(void) drawTheHandle{
 
     //----------  1
-    CGContextSaveGState(ctx);
-    
-    //I Love shadows
-    CGContextSetShadowWithColor(ctx, CGSizeMake(0, 0), 3, [UIColor blackColor].CGColor);
-    
-    //Get the handle position
-    CGPoint handleCenter =  [self pointFromAngle: self.currentValue];
-    
-    
-    
-    //Draw It!
-    [[UIColor colorWithWhite:1.0 alpha:0.7]set];
-    CGContextFillEllipseInRect(ctx, CGRectMake(handleCenter.x, handleCenter.y, TB_LINE_WIDTH, TB_LINE_WIDTH));
-    
-    CGContextRestoreGState(ctx);
+//    CGContextSaveGState(ctx);
+//    
+//    //I Love shadows
+//    CGContextSetShadowWithColor(ctx, CGSizeMake(0, 0), 3, [UIColor blackColor].CGColor);
+//    
+//    //Get the handle position
+//    CGPoint handleCenter =  [self pointFromAngle: self.currentValue];
+//    
+//    
+//    
+//    //Draw It!
+//    [[UIColor colorWithWhite:1.0 alpha:0.7]set];
+//    CGContextFillEllipseInRect(ctx, CGRectMake(handleCenter.x, handleCenter.y, TB_LINE_WIDTH, TB_LINE_WIDTH));
+//    
+//    CGContextRestoreGState(ctx);
     
     
     //----------- 2
-    //    CGContextRef ctx = UIGraphicsGetCurrentContext();
-    //    //I Love shadows
-    //    CGContextSetShadowWithColor(ctx, CGSizeMake(0, 0), 3, [UIColor blackColor].CGColor);
-    //    //Get the handle position
-    //    CGPoint handleCenter =  [self pointFromAngle: self.currentValue];
-    //    //Draw It!
-    //    [[UIColor colorWithWhite:1.0 alpha:0.7]set];
-    //    CGContextFillEllipseInRect(ctx, CGRectMake(handleCenter.x, handleCenter.y, TB_LINE_WIDTH, TB_LINE_WIDTH));
+    CGContextRef ctx = UIGraphicsGetCurrentContext();
+    //I Love shadows
+    CGContextSetShadowWithColor(ctx, CGSizeMake(0, 0), 3, [UIColor blackColor].CGColor);
+    //Get the handle position
+    CGPoint handleCenter =  [self pointFromAngle: self.currentValue];
+    //Draw It!
+    [[UIColor colorWithWhite:1.0 alpha:0.7]set];
+    CGContextFillEllipseInRect(ctx, CGRectMake(handleCenter.x, handleCenter.y, TB_LINE_WIDTH, TB_LINE_WIDTH));
     
 }
 
@@ -447,9 +376,35 @@ int _minValue = 20;
     _textField.text = [NSString stringWithFormat:@"%d",self.currentValue];
     
     self.movePoint1 = lastPoint;
-    [self.layer setNeedsDisplay];
+    
+    
+    NSLog(@"📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱📱angleInt-------------- 2 --------->%d",angleInt);
+
+    changeDeg = [self getStrokeEndVlaue:360-angleInt];
+    [self modifyCircleWithNoAnimation];
+    
+    [self setNeedsDisplay];
+}
+
+
+- (CGFloat)getStrokeEndVlaue:(int)intVlaue{
+    
+    
+    return (intVlaue)/360.f;
+}
+
+
+CGFloat changeDeg = 0;
+CGFloat previousChangeDeg = 0;
+//动画和非动画,这个例子主要体现在了对绘制完成时间的控制上
+- (void)modifyCircleWithNoAnimation {
+    
+    _progressLayer.strokeStart = previousChangeDeg;
+    _progressLayer.strokeEnd = changeDeg;
     
 }
+
+
 
 
 
