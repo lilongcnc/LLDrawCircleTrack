@@ -1,19 +1,19 @@
 //
-//  TBViewController.m
-//  TB_CircularSlider
+//  ViewController.m
+//  LLDrawCircleTrack
 //
-//  Created by Yari Dareglia on 1/12/13.
-//  Copyright (c) 2013 Yari Dareglia. All rights reserved.
+//  Created by 李龙 on 16/9/20.
+//  Copyright © 2016年 李龙. All rights reserved.
 //
 
-#import "TBViewController.h"
+#import "ViewController.h"
 #import "TBCircularSlider.h"
 
-@interface TBViewController ()
+@interface ViewController ()
 
 @end
 
-@implementation TBViewController
+@implementation ViewController
 
 - (void)viewDidLoad
 {
@@ -35,7 +35,7 @@
 /** This function is called when Circular slider value changes **/
 -(void)newValue:(TBCircularSlider*)slider{
     //TBCircularSlider *slider = (TBCircularSlider*)sender;
-//    NSLog(@"Slider Value %d",slider.angle);
+    //    NSLog(@"Slider Value %d",slider.angle);
 }
 
 - (void)didReceiveMemoryWarning
